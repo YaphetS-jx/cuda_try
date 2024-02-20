@@ -46,6 +46,9 @@ void computeGPU(double *hostData, int blockSize, int gridSize)
 	cudaError_t cuE = cudaSetDevice(myGPU);
 	assert(cudaSuccess == cuE);
 
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    
     int dataSize = blockSize * gridSize;
 
     // Allocate data on GPU memory
@@ -55,6 +58,8 @@ void computeGPU(double *hostData, int blockSize, int gridSize)
     double *deviceOutputData = NULL;
     CUDA_CHECK(cudaMalloc((void **)&deviceOutputData, dataSize * sizeof(double)));
 
+    printf("rank %d, address1 %p, address2 %p\n", rank, deviceInputData, deviceOutputData);
+    
     // Copy to GPU memory
     CUDA_CHECK(cudaMemcpy(deviceInputData, hostData, dataSize * sizeof(double), cudaMemcpyHostToDevice));
 

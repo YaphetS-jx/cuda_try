@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[])
 {
-    int reps = 100;
+    int reps = 1;
 
     // Dimensions of the dataset
     int blockSize = 256;
