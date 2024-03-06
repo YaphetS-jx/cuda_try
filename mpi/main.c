@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[])
 {
-    int reps = 1;
+    int reps = 100;
 
     // Dimensions of the dataset
     int blockSize = 256;
@@ -57,6 +57,8 @@ int main(int argc, char *argv[])
     t2 = MPI_Wtime();
     if (rank == 0) printf("CPU time %.3e ms\n", (t2-t1)*1e3);
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    
     // On each node, run computation on GPU
     for (int rep = 0; rep < reps; rep++) {
         computeGPU(dataNode, blockSize, gridSize);
