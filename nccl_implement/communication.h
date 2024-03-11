@@ -32,7 +32,9 @@
 extern "C" {
 #endif
 
-void create_NCCL_comm(MPI_Comm cart_comm, int *neighbor, cudaStream_t *stream, ncclComm_t *comm);
+void create_NCCL_comm(MPI_Comm cart_comm, cudaStream_t *stream, ncclComm_t *comm);
+
+void find_neighbor(MPI_Comm cart_comm, int *neighbor);
 
 void free_NCCL_comm(ncclComm_t *comm);
 

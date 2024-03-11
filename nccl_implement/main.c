@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
 #include "communication.h"
 
@@ -86,12 +87,15 @@ int num_hosts() {
 #undef length
 }
 
+void test_cartesian(int DMnx, int DMny, int DMnz, int reps, MPI_Comm cart_comm, cudaStream_t stream, ncclComm_t comm);
 
 int main(int argc, char* argv[])
 {
-    int DMnx = 134;
-    int DMny = 78;
-    int DMnz = 232;
+    time_t t;
+    srand((unsigned) time(&t));
+    int DMnx = rand()%400+1;
+    int DMny = rand()%400+1;
+    int DMnz = rand()%400+1;
     int reps = 10;
 
     if (argc == 4) {
@@ -145,15 +149,35 @@ int main(int argc, char* argv[])
     cuE = cudaSetDevice(myGPU);
 	assert(cudaSuccess == cuE);
 
-    int neighbor[6];
     cudaStream_t stream;
     ncclComm_t comm;
-    create_NCCL_comm(cart_comm, neighbor, &stream, &comm);
+    create_NCCL_comm(cart_comm, &stream, &comm);
     ////////////////////////////////////////////////////////////////////////
+
+    // tests 
+    test_cartesian(DMnx, DMny, DMnz, reps, cart_comm, stream, comm);
+
+    
+    //finalizing MPI
+    MPICHECK(MPI_Finalize());
+    //finalizing nlcc
+    free_NCCL_comm(&comm);
+
+    return 0;
+}
+
+
+void test_cartesian(int DMnx, int DMny, int DMnz, int reps, MPI_Comm cart_comm, cudaStream_t stream, ncclComm_t comm)
+{
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    int neighbor[6];
+    find_neighbor(cart_comm, neighbor);
 
     int len = 2 * (DMnx*DMny + DMny*DMnz + DMnx*DMnz);
     
-    double *d_send, *d_recv; 
     double *send, *recv, *recv_gpu;
     send = (double *) malloc(sizeof(double) * len);
     for (int i = 0; i < len; i++) send[i] = drand48();
@@ -175,9 +199,11 @@ int main(int argc, char* argv[])
     rdispls[4] = sdispls[4] = sdispls[3] + sendcounts[3];
     rdispls[5] = sdispls[5] = sdispls[4] + sendcounts[4];
 
+    cudaError_t cuE;
+
+    double *d_send, *d_recv; 
     while ((cuE = cudaMalloc((void **) &d_send, sizeof(double) * len)) != cudaSuccess) continue; assert(cudaSuccess == cuE);
     while ((cuE = cudaMalloc((void **) &d_recv, sizeof(double) * len)) != cudaSuccess) continue; assert(cudaSuccess == cuE);
-
     while ((cuE = cudaMemcpy(d_send, send, sizeof(double) * len, cudaMemcpyHostToDevice)) != cudaSuccess) continue; assert(cudaSuccess == cuE);
 
     double t1, t2;
@@ -200,7 +226,7 @@ int main(int argc, char* argv[])
     }
     MPI_Barrier(MPI_COMM_WORLD);
     t2 = MPI_Wtime();
-    if (!rank) printf("MPI  communication time %.3f ms\n", (t2-t1)*1e3);
+    if (!rank) printf("MPI %d times communication time %.3f ms\n", reps, (t2-t1)*1e3);
 
     MPI_Barrier(MPI_COMM_WORLD);
     t1 = MPI_Wtime();
@@ -210,7 +236,7 @@ int main(int argc, char* argv[])
     }
     MPI_Barrier(MPI_COMM_WORLD);
     t2 = MPI_Wtime();
-    if (!rank) printf("NLCC communication time %.3f ms\n", (t2-t1)*1e3);
+    if (!rank) printf("NLCC %d times communication time %.3f ms\n", reps, (t2-t1)*1e3);
 
     double err = 0; 
     for (int i = 0; i < len; i++) {
@@ -225,14 +251,4 @@ int main(int argc, char* argv[])
     free(send);
     free(recv);
     free(recv_gpu);
-    
-    //finalizing MPI
-    MPICHECK(MPI_Finalize());
-    //finalizing nlcc
-    free_NCCL_comm(&comm);
-
-    return 0;
 }
-
-
-

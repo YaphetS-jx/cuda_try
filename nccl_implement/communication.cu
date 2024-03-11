@@ -33,7 +33,7 @@ void print_vector_gpu(double *vec, int len) {
 }
 
 // assuming already bind GPU to CPU with 1:1 ration 
-void create_NCCL_comm(MPI_Comm cart_comm, int *neighbor, cudaStream_t *stream, ncclComm_t *comm)
+void create_NCCL_comm(MPI_Comm cart_comm, cudaStream_t *stream, ncclComm_t *comm)
 {
     if (cart_comm == MPI_COMM_NULL) return;
     int rank, size;
@@ -49,6 +49,15 @@ void create_NCCL_comm(MPI_Comm cart_comm, int *neighbor, cudaStream_t *stream, n
     //picking a GPU based on localRank, allocate device buffers
     CUDACHECK(cudaStreamCreate(stream));
     NCCLCHECK(ncclCommInitRank(comm, size, id, rank));
+}
+
+
+void find_neighbor(MPI_Comm cart_comm, int *neighbor)
+{
+    if (cart_comm == MPI_COMM_NULL) return;
+    int rank, size;
+    MPI_Comm_rank(cart_comm, &rank);
+    MPI_Comm_size(cart_comm, &size);
 
     int dims[3], periods[3], coords[3];
     MPI_Cart_get(cart_comm, 3, dims, periods, coords);
@@ -57,6 +66,7 @@ void create_NCCL_comm(MPI_Comm cart_comm, int *neighbor, cudaStream_t *stream, n
         MPI_Cart_shift(cart_comm, dir, 1, neighbor + dir*2, neighbor + dir*2 + 1);
     }
 }
+
 
 void free_NCCL_comm(ncclComm_t *comm)
 {
