@@ -76,6 +76,25 @@ void find_neighbor(MPI_Comm cart_comm, int *neighbor)
     // }
 }
 
+void find_neighbor_dist_graph(MPI_Comm dist_graph_comm, int *neighbor)
+{
+    if (dist_graph_comm == MPI_COMM_NULL) return;
+    int rank, size;
+    MPI_Comm_rank(dist_graph_comm, &rank);
+    MPI_Comm_size(dist_graph_comm, &size);
+
+    int srcw[26], destw[26], src[26], dest[26];
+    MPI_Dist_graph_neighbors(dist_graph_comm, 26, src, srcw, 26, dest, destw);
+
+    // printf("rank %d, src  ", rank);
+    // for (int i = 0; i < 26; i++) printf("%d ", src[i]);
+    // printf("\n");
+    // printf("rank %d, dest ", rank);
+    // for (int i = 0; i < 26; i++) printf("%d ", dest[i]);
+    // printf("\n");
+    for (int i = 0; i < 26; i++) neighbor[i] = src[i];
+}
+
 
 void free_NCCL_comm(ncclComm_t *comm)
 {
@@ -96,6 +115,20 @@ void NLCC_Neighbor_alltoallv(double *d_send, int *sendcounts, int *sdispls,
         if (neighbor[d*2+1] >= 0) {
             ncclSend(d_send + sdispls[d*2+1], sendcounts[d*2+1], ncclDouble, neighbor[d*2+1], comm, stream);
             ncclRecv(d_recv + rdispls[d*2+1], recvcounts[d*2+1], ncclDouble, neighbor[d*2+1], comm, stream);
+        }
+    }
+    NCCLCHECK(ncclGroupEnd());
+    CUDACHECK(cudaStreamSynchronize(stream));
+}
+
+void NLCC_Neighbor_alltoallv_dist_graph(double *d_send, int *sendcounts, int *sdispls,
+                        double *d_recv, int *recvcounts, int *rdispls, int *neighbor, ncclComm_t comm, cudaStream_t stream)
+{
+    NCCLCHECK(ncclGroupStart());
+    for (int i = 0; i < 26; i++) {
+        if (neighbor[i] >= 0) {
+            ncclSend(d_send + sdispls[i], sendcounts[i], ncclDouble, neighbor[i], comm, stream);
+            ncclRecv(d_recv + rdispls[i], recvcounts[i], ncclDouble, neighbor[i], comm, stream);
         }
     }
     NCCLCHECK(ncclGroupEnd());

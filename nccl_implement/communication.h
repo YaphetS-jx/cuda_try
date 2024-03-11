@@ -36,9 +36,14 @@ void create_NCCL_comm(MPI_Comm cart_comm, cudaStream_t *stream, ncclComm_t *comm
 
 void find_neighbor(MPI_Comm cart_comm, int *neighbor);
 
+void find_neighbor_dist_graph(MPI_Comm dist_graph_comm, int *neighbor);
+
 void free_NCCL_comm(ncclComm_t *comm);
 
 void NLCC_Neighbor_alltoallv(double *d_send, int *sendcounts, int *sdispls, 
+                        double *d_recv, int *recvcounts, int *rdispls, int *neighbor, ncclComm_t comm, cudaStream_t stream);
+
+void NLCC_Neighbor_alltoallv_dist_graph(double *d_send, int *sendcounts, int *sdispls,
                         double *d_recv, int *recvcounts, int *rdispls, int *neighbor, ncclComm_t comm, cudaStream_t stream);
 
 __global__ void change_value(double* vector);
