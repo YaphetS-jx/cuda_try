@@ -65,6 +65,15 @@ void find_neighbor(MPI_Comm cart_comm, int *neighbor)
     for (int dir = 0; dir < 3; dir ++) {
         MPI_Cart_shift(cart_comm, dir, 1, neighbor + dir*2, neighbor + dir*2 + 1);
     }
+
+    // int neighbor2[6];
+    // for (int dir = 0; dir < 3; dir ++) {
+        // int coords_shift[3] = {coords[0], coords[1], coords[2]};
+        // coords_shift[dir] = (coords[dir] + 1) % dims[dir];
+        // MPI_Cart_rank(cart_comm, coords_shift, neighbor2 + dir*2 + 1);
+        // coords_shift[dir] = (coords[dir] - 1 + dims[dir]) % dims[dir];
+        // MPI_Cart_rank(cart_comm, coords_shift, neighbor2 + dir*2);
+    // }
 }
 
 
@@ -79,11 +88,15 @@ void NLCC_Neighbor_alltoallv(double *d_send, int *sendcounts, int *sdispls,
     NCCLCHECK(ncclGroupStart());
     for (int d = 0; d < 3; d++) {
         // -1 dir 
-        ncclSend(d_send + sdispls[d*2], sendcounts[d*2], ncclDouble, neighbor[d*2], comm, stream);
-        ncclRecv(d_recv + rdispls[d*2], recvcounts[d*2], ncclDouble, neighbor[d*2], comm, stream);
+        if (neighbor[d*2] >= 0) {
+            ncclSend(d_send + sdispls[d*2], sendcounts[d*2], ncclDouble, neighbor[d*2], comm, stream);
+            ncclRecv(d_recv + rdispls[d*2], recvcounts[d*2], ncclDouble, neighbor[d*2], comm, stream);
+        }
         // +1 dir 
-        ncclSend(d_send + sdispls[d*2+1], sendcounts[d*2+1], ncclDouble, neighbor[d*2+1], comm, stream);
-        ncclRecv(d_recv + rdispls[d*2+1], recvcounts[d*2+1], ncclDouble, neighbor[d*2+1], comm, stream);
+        if (neighbor[d*2+1] >= 0) {
+            ncclSend(d_send + sdispls[d*2+1], sendcounts[d*2+1], ncclDouble, neighbor[d*2+1], comm, stream);
+            ncclRecv(d_recv + rdispls[d*2+1], recvcounts[d*2+1], ncclDouble, neighbor[d*2+1], comm, stream);
+        }
     }
     NCCLCHECK(ncclGroupEnd());
     CUDACHECK(cudaStreamSynchronize(stream));
