@@ -5,7 +5,7 @@ CC = mpicc
 NVCC = /usr/local/pace-apps/manual/packages/nvhpc/Linux_x86_64/22.11/cuda/bin/nvcc
 
 # Specify the flags for the compiler
-CFLAGS = -std=gnu99 -O3
+CFLAGS = -std=gnu99 -O3 -g
 CUFLAGS = -arch=sm_70 -ccbin=g++ -Xcompiler=-pthread
 
 # Include directories and path 
@@ -20,7 +20,7 @@ LDFLAGS += -L$(NCCLROOT)/lib
 LIBS += -lnccl
 
 # Object files
-OBJECTS = main.o communication.o
+OBJECTS = main.o communication.o tests.o
 
 # Executable name
 all: test
